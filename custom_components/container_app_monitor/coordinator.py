@@ -30,8 +30,11 @@ class ContainerAppMonitorCoordinator(DataUpdateCoordinator[dict[str, any]]):
 
     async def _async_update_data(self) -> dict[str, any]:
         """Fetch container status from Supervisor and handle issues."""
-        app_name = self.entry.data["app_name"]
-        expected_state = self.entry.data["expected_state"]
+        app_name = self.entry.data.get("app_name")
+        expected_state = self.entry.data.get("expected_state", "running")
+
+        if not app_name:
+            return {"is_running": False}
 
         is_running = await self._check_container_running(app_name)
 
@@ -51,7 +54,7 @@ class ContainerAppMonitorCoordinator(DataUpdateCoordinator[dict[str, any]]):
         """Query Supervisor API to check if container add-on is currently running."""
         token = os.environ.get("SUPERVISOR_TOKEN")
         if not token:
-            return True  # Fallback assumption if testing outside HAOS
+            return True # Fallback assumption if testing outside HAOS
 
         url = f"http://supervisor/addons/{app_name}/info"
         headers = {"Authorization": f"Bearer {token}"}

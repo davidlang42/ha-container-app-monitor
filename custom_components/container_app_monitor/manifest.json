@@ -1,0 +1,10 @@
+{
+  "domain": "container_app_monitor",
+  "name": "Container App Monitor",
+  "documentation": "https://github.com/davidlang42/ha-container-app-monitor",
+  "requirements": [],
+  "codeowners": ["@davidlang42"],
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "version": "1.0.0"
+}

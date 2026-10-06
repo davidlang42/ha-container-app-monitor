@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Background Badge -->
+  <rect width="512" height="512" rx="100" fill="#212121"/>
+  
+  <!-- Isometric Container / Box Shape 1 (Bottom) -->
+  <path fill="#424242" d="M256 340L144 276v-64l112 64z"/>
+  <path fill="#616161" d="M256 340l112-64v-64L256 276z"/>
+  <path fill="#757575" d="M256 212L144 148l112-64 112 64z"/>
+
+  <!-- Isometric Container / Box Shape 2 (Top Stacked) -->
+  <path fill="#e0e0e0" d="M256 420L144 356v-64l112 64z"/>
+  <path fill="#bdbdbd" d="M256 420l112-64v-64l-112 64z"/>
+  <path fill="#eeeeee" d="M256 292L144 228l112-64 112 64z"/>
+
+  <!-- State Monitoring Indicator Dot (Orange/Amber Monitor State Alert/Status) -->
+  <circle cx="410" cy="102" r="40" fill="#ff9800" stroke="#212121" stroke-width="12"/>
+</svg>

@@ -1,0 +1,8 @@
+{
+  "issues": {
+    "state_mismatch": {
+      "title": "Container App State Mismatch: {app_name}",
+      "description": "The container app **{app_name}** is expected to be **{expected_state}**, but its actual state differs.\n\n### Recent App Logs:\n```text\n{logs}\n```\n\nClick **Submit** below to run automated remediation and restore the expected container state."
+    }
+  }
+}

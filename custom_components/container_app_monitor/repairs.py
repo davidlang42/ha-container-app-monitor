@@ -4,9 +4,10 @@ from __future__ import annotations
 import os
 import logging
 import voluptuous as vol
-from homeassistant.components.repairs import RepairsFlow, async_create_issue, async_delete_issue
+from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
@@ -48,7 +49,6 @@ class ContainerRepairFlow(RepairsFlow):
             _LOGGER.warning("Missing SUPERVISOR_TOKEN; cannot execute remediation command.")
             return
 
-        # Action endpoint mapping: /addons/{slug}/start or /addons/{slug}/stop
         action = "start" if self.expected_state == "running" else "stop"
         url = f"http://supervisor/addons/{self.app_name}/{action}"
         headers = {"Authorization": f"Bearer {token}"}
@@ -68,7 +68,6 @@ class ContainerRepairFlow(RepairsFlow):
         if not token:
             return "No supervisor token found for log retrieval."
 
-        # Supervisor API endpoint for latest app container logs
         url = f"http://supervisor/addons/{app_name}/logs/latest?lines=50"
         headers = {"Authorization": f"Bearer {token}"}
         session = async_get_clientsession(self.hass)
@@ -76,7 +75,6 @@ class ContainerRepairFlow(RepairsFlow):
         try:
             async with session.get(url, headers=headers, timeout=10) as response:
                 if response.status == 200:
-                    # Logs endpoint returns text/plain output stream
                     return await response.text()
                 return f"Unable to fetch logs (HTTP status {response.status})"
         except Exception as err:
@@ -87,12 +85,12 @@ async def async_create_container_issue(
     hass: HomeAssistant, entry_id: str, app_name: str, expected_state: str
 ) -> None:
     """Create a persistent interactive repair issue for container state violation."""
-    async_create_issue(
+    ir.async_create_issue(
         hass,
         domain=DOMAIN,
         issue_id=f"mismatch_{entry_id}",
         is_fixable=True,
-        severity="error",
+        severity=ir.IssueSeverity.ERROR,
         translation_key="state_mismatch",
         translation_placeholders={
             "app_name": app_name,
@@ -102,7 +100,7 @@ async def async_create_container_issue(
 
 async def async_remove_container_issue(hass: HomeAssistant, entry_id: str) -> None:
     """Automatically remove issue if resolved manually or via normal health checks."""
-    async_delete_issue(hass, domain=DOMAIN, issue_id=f"mismatch_{entry_id}")
+    ir.async_delete_issue(hass, domain=DOMAIN, issue_id=f"mismatch_{entry_id}")
 
 async def async_create_fix_flow(
     hass: HomeAssistant, issue_id: str, data: dict[str, str] | None

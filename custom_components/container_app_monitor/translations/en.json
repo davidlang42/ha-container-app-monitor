@@ -1,8 +1,16 @@
 {
   "issues": {
     "state_mismatch": {
-      "title": "Container App State Mismatch: {app_name}",
-      "description": "The container app **{app_name}** is expected to be **{expected_state}**, but its actual state differs.\n\n### Recent App Logs:\n```text\n{logs}\n```\n\nClick **Submit** below to run automated remediation and restore the expected container state."
+      "title": "{friendly_name} ({app_name}) app should be {target_state}",
+      "description": "The container app {friendly_name} ({app_name}) is currently in an unexpected state.",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Confirm Container Action",
+            "description": "This will {action_upper} the container app {friendly_name} ({app_name}).\n\nAre you sure you want to do this?\n\n### Recent Logs:\n```text\n{logs}\n```"
+          }
+        }
+      }
     }
   }
 }

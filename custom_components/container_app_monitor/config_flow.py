@@ -52,7 +52,7 @@ class ContainerAppMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
         """Create the options flow for reconfiguration."""
-        return ContainerAppMonitorOptionsFlow(config_entry)
+        return ContainerAppMonitorOptionsFlow()
 
     async def async_step_user(self, user_input: dict[str, any] | None = None) -> FlowResult:
         """Handle the initial setup step."""
@@ -85,17 +85,12 @@ class ContainerAppMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class ContainerAppMonitorOptionsFlow(config_entries.OptionsFlow):
     """Handle options/reconfiguration for Container App Monitor."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
-
     async def async_step_init(self, user_input: dict[str, any] | None = None) -> FlowResult:
         """Manage the reconfiguration options step."""
         errors: dict[str, str] = {}
         app_map = await async_get_container_apps(self.hass)
 
         if user_input is not None:
-            # Update entry data with new choices
             self.hass.config_entries.async_update_entry(
                 self.config_entry,
                 data=user_input,

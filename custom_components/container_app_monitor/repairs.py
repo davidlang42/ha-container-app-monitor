@@ -4,9 +4,8 @@ from __future__ import annotations
 import os
 import logging
 import voluptuous as vol
-from homeassistant.components.repairs import RepairsFlow
+from homeassistant.components.repairs import RepairsFlow, RepairsFlowResult
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -27,7 +26,7 @@ class ContainerRepairFlow(RepairsFlow):
         self.friendly_name = friendly_name
         self.expected_state = expected_state
 
-    async def async_step_init(self, user_input: dict[str, str] | None = None) -> FlowResult:
+    async def async_step_init(self, user_input: dict[str, str] | None = None) -> RepairsFlowResult:
         """Handle initial step: preview logs and request confirmation to start/stop."""
         # 1. Action executes ONLY when user clicks Submit (user_input is populated)
         if user_input is not None:

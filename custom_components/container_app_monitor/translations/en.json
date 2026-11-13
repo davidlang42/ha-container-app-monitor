@@ -1,7 +1,7 @@
 {
   "issues": {
     "state_mismatch": {
-      "title": "{friendly_name} ({app_name}) app should be {target_state}",
+      "title": "{friendly_name} app should be {target_state}",
       "description": "The container app {friendly_name} ({app_name}) is currently in an unexpected state.",
       "fix_flow": {
         "step": {

@@ -4,10 +4,16 @@
       "title": "{friendly_name} app should be {target_state}",
       "description": "The container app {friendly_name} ({app_name}) is currently in an unexpected state.",
       "fix_flow": {
+        "error": {
+          "must_confirm": "You must check the confirmation box to proceed."
+        },
         "step": {
           "init": {
             "title": "Confirm Container Action",
-            "description": "This will {action_upper} the container app {friendly_name} ({app_name}).\n\nAre you sure you want to do this?\n\n### Recent Logs:\n```text\n{logs}\n```"
+            "description": "This will {action_upper} the container app {friendly_name} ({app_name}).\n\nAre you sure you want to do this?\n\n### Recent Logs:\n```text\n{logs}\n```",
+            "data": {
+              "confirm": "I confirm I want to execute this action"
+            }
           }
         }
       }

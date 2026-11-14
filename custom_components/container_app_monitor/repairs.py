@@ -13,50 +13,67 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+async def async_create_fix_flow(
+    hass: HomeAssistant, issue_id: str, data: dict[str, str] | None
+) -> RepairsFlow:
+    """Create the fix flow handler instantly without blocking awaits."""
+    return ContainerRepairFlow(issue_id, data)
+
 class ContainerRepairFlow(RepairsFlow):
     """Handler for fixing container state discrepancies interactively via Supervisor API."""
 
-    def __init__(
-        self, hass: HomeAssistant, entry_id: str, app_name: str, friendly_name: str, expected_state: str
-    ) -> None:
+    def __init__(self, issue_id: str, data: dict[str, str] | None) -> None:
         """Initialize repair flow parameters."""
-        self.hass = hass
-        self.entry_id = entry_id
-        self.app_name = app_name
-        self.friendly_name = friendly_name
-        self.expected_state = expected_state
+        self.issue_id = issue_id
+        self.data = data or {}
+
+    def _get_entry_info(self) -> tuple[str, str]:
+        """Helper to retrieve app_name and expected_state from config entry."""
+        entry_id = self.issue_id.replace("mismatch_", "")
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            if entry.entry_id == entry_id:
+                return (
+                    entry.data.get("app_name", "unknown"),
+                    entry.data.get("expected_state", "running"),
+                )
+        return "unknown", "running"
 
     async def async_step_init(self, user_input: dict[str, str] | None = None) -> RepairsFlowResult:
-        """Handle initial step: preview logs and request confirmation to start/stop."""
-        # 1. Action executes ONLY when user clicks Submit (user_input is populated)
+        """Step 1: Display confirmation modal and container logs. Clicking Submit proceeds to step 2."""
         if user_input is not None:
-            await self._execute_remediation()
-            return self.async_create_entry(title="", data={})
+            return await self.async_step_confirm()
 
-        # 2. First call (user_input is None): fetch logs and display form with action button
-        logs = await self._get_app_logs(self.app_name)
-        action_upper = "START" if self.expected_state == "running" else "STOP"
+        app_name, expected_state = self._get_entry_info()
+        friendly_name = await self._get_friendly_name(app_name)
+        logs = await self._get_app_logs(app_name)
+        action_upper = "START" if expected_state == "running" else "STOP"
 
         return self.async_show_form(
             step_id="init",
+            data_schema=vol.Schema({}),
             description_placeholders={
-                "app_name": self.app_name,
-                "friendly_name": self.friendly_name,
+                "app_name": app_name,
+                "friendly_name": friendly_name,
                 "action_upper": action_upper,
                 "logs": logs,
             },
-            data_schema=vol.Schema({}),
         )
 
-    async def _execute_remediation(self) -> None:
+    async def async_step_confirm(self, user_input: dict[str, str] | None = None) -> RepairsFlowResult:
+        """Step 2: Execute remediation ONLY when the form in step 1 is submitted."""
+        app_name, expected_state = self._get_entry_info()
+        await self._execute_remediation(app_name, expected_state)
+        return self.async_create_entry(title="", data={})
+
+    async def _execute_remediation(self, app_name: str, expected_state: str) -> None:
         """Trigger container start or stop via Supervisor REST endpoint."""
         token = os.environ.get("SUPERVISOR_TOKEN")
-        if not token:
-            _LOGGER.warning("Missing SUPERVISOR_TOKEN; cannot execute remediation command.")
+        if not token or app_name == "unknown":
+            _LOGGER.warning("Cannot execute remediation: Invalid token or app_name.")
             return
 
-        action = "start" if self.expected_state == "running" else "stop"
-        url = f"http://supervisor/addons/{self.app_name}/{action}"
+        action = "start" if expected_state == "running" else "stop"
+        url = f"http://supervisor/addons/{app_name}/{action}"
         headers = {"Authorization": f"Bearer {token}"}
         session = async_get_clientsession(self.hass)
 
@@ -64,9 +81,28 @@ class ContainerRepairFlow(RepairsFlow):
             async with session.post(url, headers=headers, timeout=30) as response:
                 if response.status != 200:
                     text = await response.text()
-                    _LOGGER.error("Failed to %s container %s: %s", action, self.app_name, text)
+                    _LOGGER.error("Failed to %s container %s: %s", action, app_name, text)
         except Exception as err:
             _LOGGER.error("Exception occurred during container %s remediation: %s", action, err)
+
+    async def _get_friendly_name(self, app_name: str) -> str:
+        """Look up add-on friendly name from Supervisor API."""
+        token = os.environ.get("SUPERVISOR_TOKEN")
+        if not token:
+            return app_name
+
+        url = f"http://supervisor/addons/{app_name}/info"
+        headers = {"Authorization": f"Bearer {token}"}
+        session = async_get_clientsession(self.hass)
+
+        try:
+            async with session.get(url, headers=headers, timeout=10) as response:
+                if response.status == 200:
+                    res_data = await response.json()
+                    return res_data.get("data", {}).get("name", app_name)
+        except Exception:
+            pass
+        return app_name
 
     async def _get_app_logs(self, app_name: str) -> str:
         """Retrieve recent stdout log lines from the container app via Supervisor logs API."""
@@ -115,41 +151,3 @@ async def async_create_container_issue(
 async def async_remove_container_issue(hass: HomeAssistant, entry_id: str) -> None:
     """Automatically remove issue if resolved manually or via normal health checks."""
     ir.async_delete_issue(hass, domain=DOMAIN, issue_id=f"mismatch_{entry_id}")
-
-async def _async_get_friendly_name(hass: HomeAssistant, app_name: str) -> str:
-    """Look up add-on friendly name from Supervisor API."""
-    token = os.environ.get("SUPERVISOR_TOKEN")
-    if not token:
-        return app_name
-
-    url = f"http://supervisor/addons/{app_name}/info"
-    headers = {"Authorization": f"Bearer {token}"}
-    session = async_get_clientsession(hass)
-
-    try:
-        async with session.get(url, headers=headers, timeout=10) as response:
-            if response.status == 200:
-                res_data = await response.json()
-                return res_data.get("data", {}).get("name", app_name)
-    except Exception:
-        pass
-    return app_name
-
-async def async_create_fix_flow(
-    hass: HomeAssistant, issue_id: str, data: dict[str, str] | None
-) -> RepairsFlow | None:
-    """Create flow handler when user clicks fix on the repair issue dialog."""
-    if issue_id.startswith("mismatch_"):
-        entry_id = issue_id.replace("mismatch_", "")
-        for entry in hass.config_entries.async_entries(DOMAIN):
-            if entry.entry_id == entry_id:
-                app_name = entry.data.get("app_name", "unknown_app")
-                friendly_name = await _async_get_friendly_name(hass, app_name)
-                return ContainerRepairFlow(
-                    hass=hass,
-                    entry_id=entry_id,
-                    app_name=app_name,
-                    friendly_name=friendly_name,
-                    expected_state=entry.data.get("expected_state", "running"),
-                )
-    return None

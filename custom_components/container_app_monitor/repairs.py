@@ -40,7 +40,7 @@ class ContainerRepairFlow(RepairsFlow):
 
     async def async_step_init(self, user_input: dict[str, str] | None = None) -> RepairsFlowResult:
         """Step 1: Display confirmation modal and container logs. Clicking Submit proceeds to step 2."""
-        if user_input is not None:
+        if user_input is not None and user_input.get("confirm_step") == "1":
             return await self.async_step_confirm()
 
         app_name, expected_state = self._get_entry_info()
@@ -48,9 +48,13 @@ class ContainerRepairFlow(RepairsFlow):
         logs = await self._get_app_logs(app_name)
         action_upper = "START" if expected_state == "running" else "STOP"
 
+        schema = vol.Schema({
+            vol.Optional("confirm_step", default="1"): str,
+        })
+
         return self.async_show_form(
             step_id="init",
-            data_schema=None,
+            data_schema=schema,
             description_placeholders={
                 "app_name": app_name,
                 "friendly_name": friendly_name,

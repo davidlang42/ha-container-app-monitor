@@ -50,7 +50,7 @@ class ContainerRepairFlow(RepairsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({}),
+            data_schema=None,
             description_placeholders={
                 "app_name": app_name,
                 "friendly_name": friendly_name,
